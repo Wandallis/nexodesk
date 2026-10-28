@@ -15,19 +15,27 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-
-  
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Estados dos Filtros
+  // Estados dos Filtros e Debounce
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
   const [selectedPriority, setSelectedPriority] = useState('Todos');
 
   // Estados do Modal de Detalhes
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Efeito de Debounce 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Carrega os chamados via API REST (interceptada pelo MSW)
   const loadTickets = async () => {
@@ -62,21 +70,24 @@ export default function App() {
   const inProgressTickets = tickets.filter(t => t.status === 'Em Andamento').length;
   const completedTickets = tickets.filter(t => t.status === 'Concluído').length;
 
-  // Lógica de Filtros Combinados (Busca, Status e Prioridade)
+  // Lógica de Filtros Combinados usando o debouncedSearch
   const filteredTickets = useMemo(() => {
     return tickets.filter(ticket => {
-      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = ticket.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                            ticket.authorName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                            ticket.sector.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchesStatus = selectedStatus === 'Todos' || ticket.status === selectedStatus;
       const matchesPriority = selectedPriority === 'Todos' || ticket.priority === selectedPriority;
 
       return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [tickets, searchTerm, selectedStatus, selectedPriority]);
+  }, [tickets, debouncedSearch, selectedStatus, selectedPriority]);
 
   const hasActiveFilters = searchTerm !== '' || selectedStatus !== 'Todos' || selectedPriority !== 'Todos';
 
   const handleClearFilters = () => {
     setSearchTerm('');
+    setDebouncedSearch('');
     setSelectedStatus('Todos');
     setSelectedPriority('Todos');
   };
@@ -112,7 +123,7 @@ export default function App() {
     window.location.reload();
   };
 
- if (window.location.pathname === '/novo') {
+  if (window.location.pathname === '/novo') {
     return <NewTicketPage />;
   }
 
@@ -166,7 +177,7 @@ export default function App() {
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* Tabela de Chamados */}
+        {/* Tabela de Chamados com suporte a estado de carregamento */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-5 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-base sm:text-lg font-bold text-slate-900">Lista de Solicitações</h2>
@@ -175,11 +186,20 @@ export default function App() {
             </div>
           </div>
 
-          <TicketTable 
-            tickets={filteredTickets} 
-            onViewDetails={handleViewDetails} 
-            onDeleteTicket={handleDeleteTicket} 
-          />
+          {isLoading ? (
+            /* Esqueleto simples de carregamento (Skeleton Loading) */
+            <div className="p-6 space-y-4 animate-pulse">
+              <div className="h-10 bg-slate-100 rounded-lg w-full"></div>
+              <div className="h-12 bg-slate-100 rounded-lg w-full"></div>
+              <div className="h-12 bg-slate-100 rounded-lg w-full"></div>
+            </div>
+          ) : (
+            <TicketTable 
+              tickets={filteredTickets} 
+              onViewDetails={handleViewDetails} 
+              onDeleteTicket={handleDeleteTicket} 
+            />
+          )}
         </div>
 
       </main>
