@@ -34,4 +34,5 @@ export const INITIAL_TICKETS: Ticket[] = [
     status: 'Concluído',
     createdAt: '2026-10-28T11:00:00.000Z'
   }
+  
 ];

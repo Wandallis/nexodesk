@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
+import { getStoredTickets, updateTicketStatus, deleteTicket } from './services/api';
 import { INITIAL_TICKETS } from './data/mockTickets';
 import type { Ticket } from './types/ticket';
-import { Header } from './components/header';
+import { Header } from './components/Header';
 import { MetricCard } from './components/MetricCard';
 import { TicketTable } from './components/TicketTable';
 import { TicketFilters } from './components/TicketFilters';
@@ -14,8 +15,8 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
-  
+
+  const [tickets, setTickets] = useState<Ticket[]>(getStoredTickets());
   // Estados dos Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
@@ -66,20 +67,20 @@ export default function App() {
 
   const handleDeleteTicket = (id: string) => {
     if (confirm('Deseja realmente excluir este chamado?')) {
-      setTickets(prev => prev.filter(t => t.id !== id));
+      // Exclui no localStorage e obtém a nova lista
+      const updated = deleteTicket(id);
+      setTickets(updated);
+      alert('Chamado excluído com sucesso.');
     }
   };
 
   // Função para alterar o status do chamado com feedback
   const handleUpdateStatus = (ticketId: string, newStatus: Ticket['status']) => {
-    setTickets(prev => 
-      prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t)
-    );
+    const updated = updateTicketStatus(ticketId, newStatus);
+    setTickets(updated);
     
-    // Atualiza também o ticket selecionado atualmente no modal para refletir na hora
     setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
-
-    alert(`Sucesso! Status do chamado atualizado para "${newStatus}".`);
+    alert(`Sucesso! Status atualizado para "${newStatus}".`);
   };
 
  
@@ -122,7 +123,7 @@ export default function App() {
           />
         </div>
 
-        {/* Componente de Filtros e Busca */}
+     
         <TicketFilters 
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -134,7 +135,7 @@ export default function App() {
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* Bloco da Lista / Tabela */}
+       
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-5 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-base sm:text-lg font-bold text-slate-900">Lista de Solicitações</h2>
@@ -152,7 +153,7 @@ export default function App() {
 
       </main>
 
-      {/* Modal de Detalhes do Chamado */}
+      
       <TicketDetailsModal 
         ticket={selectedTicket}
         isOpen={isDetailsModalOpen}
