@@ -1,5 +1,4 @@
 import { Search, X } from 'lucide-react';
-import { type TicketPriority, type TicketStatus } from '../types/ticket';
 interface TicketFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
