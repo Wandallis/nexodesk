@@ -5,6 +5,7 @@ import { Header } from './components/header';
 import { MetricCard } from './components/MetricCard';
 import { TicketTable } from './components/TicketTable';
 import { TicketFilters } from './components/TicketFilters';
+import { TicketDetailsModal } from './components/TicketDetailsModal';
 import { 
   ClipboardList, 
   Clock, 
@@ -19,6 +20,24 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
   const [selectedPriority, setSelectedPriority] = useState('Todos');
+
+  // Estados do Modal de Detalhes
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Lógica para visualizar detalhes
+  const handleViewDetails = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setSelectedTicket(null);
+    setIsDetailsModalOpen(false);
+  };
+
+
+
 
   // Contadores globais (baseados em todos os tickets)
   const totalTickets = tickets.length;
@@ -51,9 +70,19 @@ export default function App() {
     }
   };
 
-  const handleViewDetails = (ticket: Ticket) => {
-    alert(`Detalhes do chamado:\n\nTítulo: ${ticket.title}\nSolicitante: ${ticket.authorName}\nStatus: ${ticket.status}`);
+  // Função para alterar o status do chamado com feedback
+  const handleUpdateStatus = (ticketId: string, newStatus: Ticket['status']) => {
+    setTickets(prev => 
+      prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t)
+    );
+    
+    // Atualiza também o ticket selecionado atualmente no modal para refletir na hora
+    setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
+
+    alert(`Sucesso! Status do chamado atualizado para "${newStatus}".`);
   };
+
+ 
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -122,6 +151,16 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* Modal de Detalhes do Chamado */}
+      <TicketDetailsModal 
+        ticket={selectedTicket}
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseDetailsModal}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+
     </div>
   );
 }
