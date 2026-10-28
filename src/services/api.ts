@@ -1,59 +1,45 @@
 import type { Ticket, CreateTicketDTO } from '../types/ticket';
-import { INITIAL_TICKETS } from '../data/mockTickets';
 
-const STORAGE_KEY = '@nexodesk:tickets';
-
-// Função auxiliar para carregar os chamados (simula GET /tickets)
-export function getStoredTickets(): Ticket[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_TICKETS));
-    return INITIAL_TICKETS;
-  }
-  return JSON.parse(stored);
+// GET /tickets — Listar chamados
+export async function fetchTickets(): Promise<Ticket[]> {
+  const response = await fetch('/tickets');
+  if (!response.ok) throw new Error('Falha ao carregar os chamados.');
+  return response.json();
 }
 
-// Salva a lista atualizada no localStorage
-function saveTickets(tickets: Ticket[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+// GET /tickets/:id — Detalhes do chamado
+export async function fetchTicketById(id: string): Promise<Ticket> {
+  const response = await fetch(`/tickets/${id}`);
+  if (!response.ok) throw new Error('Chamado não encontrado.');
+  return response.json();
 }
 
-// Simula: GET /tickets/:id
-export function getTicketById(id: string): Ticket | null {
-  const tickets = getStoredTickets();
-  return tickets.find(t => t.id === id) || null;
+// POST /tickets — Criar novo chamado
+export async function createTicket(data: CreateTicketDTO): Promise<Ticket> {
+  const response = await fetch('/tickets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Falha ao criar o chamado.');
+  return response.json();
 }
 
-// Simula: POST /tickets (Criar Chamado)
-export function createTicket(data: CreateTicketDTO): Ticket {
-  const tickets = getStoredTickets();
-  
-  const newTicket: Ticket = {
-    id: String(Date.now()), 
-    ...data,
-    status: 'Aberto', 
-    createdAt: new Date().toISOString() 
-  };
-
-  const updatedTickets = [newTicket, ...tickets];
-  saveTickets(updatedTickets);
-  return newTicket;
+// PATCH /tickets/:id — Atualizar status
+export async function updateTicketStatus(id: string, newStatus: Ticket['status']): Promise<Ticket> {
+  const response = await fetch(`/tickets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus }),
+  });
+  if (!response.ok) throw new Error('Falha ao atualizar o status.');
+  return response.json();
 }
 
-
-export function updateTicketStatus(id: string, newStatus: Ticket['status']): Ticket[] {
-  const tickets = getStoredTickets();
-  const updatedTickets = tickets.map(t => 
-    t.id === id ? { ...t, status: newStatus } : t
-  );
-  saveTickets(updatedTickets);
-  return updatedTickets;
-}
-
-
-export function deleteTicket(id: string): Ticket[] {
-  const tickets = getStoredTickets();
-  const updatedTickets = tickets.filter(t => t.id !== id);
-  saveTickets(updatedTickets);
-  return updatedTickets;
+// DELETE /tickets/:id — Excluir chamado
+export async function deleteTicket(id: string): Promise<void> {
+  const response = await fetch(`/tickets/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Falha ao excluir o chamado.');
 }

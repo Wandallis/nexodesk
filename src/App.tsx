@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
-import { getStoredTickets, updateTicketStatus, deleteTicket } from './services/api';
-import { INITIAL_TICKETS } from './data/mockTickets';
+import { useState, useEffect, useMemo } from 'react';
 import type { Ticket } from './types/ticket';
+import { fetchTickets, updateTicketStatus, deleteTicket } from './services/api';
 import { Header } from './components/Header';
 import { MetricCard } from './components/MetricCard';
 import { TicketTable } from './components/TicketTable';
 import { TicketFilters } from './components/TicketFilters';
 import { TicketDetailsModal } from './components/TicketDetailsModal';
+import { NewTicketPage } from './pages/NewTicketPage';
 import { 
   ClipboardList, 
   Clock, 
@@ -16,7 +16,10 @@ import {
 
 export default function App() {
 
-  const [tickets, setTickets] = useState<Ticket[]>(getStoredTickets());
+  
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Estados dos Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
@@ -26,7 +29,23 @@ export default function App() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Lógica para visualizar detalhes
+  // Carrega os chamados via API REST (interceptada pelo MSW)
+  const loadTickets = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchTickets();
+      setTickets(data);
+    } catch (error) {
+      console.error('Erro ao carregar chamados:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
   const handleViewDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket);
     setIsDetailsModalOpen(true);
@@ -37,16 +56,13 @@ export default function App() {
     setIsDetailsModalOpen(false);
   };
 
-
-
-
-  // Contadores globais (baseados em todos os tickets)
+  // Contadores globais do dashboard
   const totalTickets = tickets.length;
   const openedTickets = tickets.filter(t => t.status === 'Aberto').length;
   const inProgressTickets = tickets.filter(t => t.status === 'Em Andamento').length;
   const completedTickets = tickets.filter(t => t.status === 'Concluído').length;
 
-  // Lógica de Filtros Combinados
+  // Lógica de Filtros Combinados (Busca, Status e Prioridade)
   const filteredTickets = useMemo(() => {
     return tickets.filter(ticket => {
       const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -65,29 +81,44 @@ export default function App() {
     setSelectedPriority('Todos');
   };
 
-  const handleDeleteTicket = (id: string) => {
-    if (confirm('Deseja realmente excluir este chamado?')) {
-      // Exclui no localStorage e obtém a nova lista
-      const updated = deleteTicket(id);
-      setTickets(updated);
-      alert('Chamado excluído com sucesso.');
+  const handleUpdateStatus = async (ticketId: string, newStatus: Ticket['status']) => {
+    try {
+      await updateTicketStatus(ticketId, newStatus);
+      await loadTickets();
+      setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
+      alert(`Sucesso! Status atualizado para "${newStatus}".`);
+    } catch (error) {
+      alert('Erro ao atualizar status.');
+      console.error(error);
     }
   };
 
-  // Função para alterar o status do chamado com feedback
-  const handleUpdateStatus = (ticketId: string, newStatus: Ticket['status']) => {
-    const updated = updateTicketStatus(ticketId, newStatus);
-    setTickets(updated);
-    
-    setSelectedTicket(prev => prev ? { ...prev, status: newStatus } : null);
-    alert(`Sucesso! Status atualizado para "${newStatus}".`);
+  const handleDeleteTicket = async (id: string) => {
+    if (confirm('Deseja realmente excluir este chamado?')) {
+      try {
+        await deleteTicket(id);
+        await loadTickets();
+        alert('Chamado excluído com sucesso.');
+      } catch (error) {
+        alert('Erro ao excluir chamado.');
+        console.error(error);
+      }
+    }
   };
 
- 
+  // Navega para a rota dedicada de novo chamado
+  const handleOpenNewTicketRoute = () => {
+    window.history.pushState({}, '', '/novo');
+    window.location.reload();
+  };
+
+ if (window.location.pathname === '/novo') {
+    return <NewTicketPage />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
-      <Header onOpenNewTicketModal={() => alert('Abrir modal de novo chamado')} />
+      <Header onOpenNewTicketModal={handleOpenNewTicketRoute} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         
@@ -123,7 +154,7 @@ export default function App() {
           />
         </div>
 
-     
+        {/* Filtros e Busca */}
         <TicketFilters 
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -135,12 +166,12 @@ export default function App() {
           hasActiveFilters={hasActiveFilters}
         />
 
-       
+        {/* Tabela de Chamados */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-5 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-base sm:text-lg font-bold text-slate-900">Lista de Solicitações</h2>
             <div className="text-xs sm:text-sm text-slate-500">
-              Mostrando {filteredTickets.length} de {tickets.length} chamados
+              {isLoading ? 'Carregando chamados...' : `Mostrando ${filteredTickets.length} de ${tickets.length} chamados`}
             </div>
           </div>
 
@@ -153,15 +184,13 @@ export default function App() {
 
       </main>
 
-      
+      {/* Modal de Detalhes */}
       <TicketDetailsModal 
         ticket={selectedTicket}
         isOpen={isDetailsModalOpen}
         onClose={handleCloseDetailsModal}
         onUpdateStatus={handleUpdateStatus}
       />
-
-
     </div>
   );
 }
