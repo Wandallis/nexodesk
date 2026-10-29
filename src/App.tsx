@@ -17,6 +17,9 @@ import {
 export default function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(
+    () => localStorage.getItem('nexodesk-theme') === 'dark'
+  );
 
   // Estados dos Filtros e Debounce
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,13 +126,23 @@ export default function App() {
     window.location.reload();
   };
 
+  const handleToggleTheme = () => {
+    const nextIsDarkMode = !isDarkMode;
+    localStorage.setItem('nexodesk-theme', nextIsDarkMode ? 'dark' : 'light');
+    setIsDarkMode(nextIsDarkMode);
+  };
+
   if (window.location.pathname === '/novo') {
-    return <NewTicketPage />;
+    return <NewTicketPage isDarkMode={isDarkMode} onToggleTheme={handleToggleTheme} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <Header onOpenNewTicketModal={handleOpenNewTicketRoute} />
+    <div className={`${isDarkMode ? 'dark ' : ''}min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100`}>
+      <Header
+        onOpenNewTicketModal={handleOpenNewTicketRoute}
+        isDarkMode={isDarkMode}
+        onToggleTheme={handleToggleTheme}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         
@@ -139,29 +152,29 @@ export default function App() {
             title="Total de Chamados" 
             value={totalTickets} 
             icon={<ClipboardList size={24} />} 
-            textColor="text-slate-900" 
-            bgColor="bg-blue-50 text-blue-600" 
+            textColor="text-slate-900 dark:text-slate-100" 
+            bgColor="bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300" 
           />
           <MetricCard 
             title="Abertos" 
             value={openedTickets} 
             icon={<AlertCircle size={24} />} 
             textColor="text-amber-600" 
-            bgColor="bg-amber-50 text-amber-600" 
+            bgColor="bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-300" 
           />
           <MetricCard 
             title="Em Andamento" 
             value={inProgressTickets} 
             icon={<Clock size={24} />} 
             textColor="text-indigo-600" 
-            bgColor="bg-indigo-50 text-indigo-600" 
+            bgColor="bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300" 
           />
           <MetricCard 
             title="Concluídos" 
             value={completedTickets} 
             icon={<CheckCircle2 size={24} />} 
             textColor="text-emerald-600" 
-            bgColor="bg-emerald-50 text-emerald-600" 
+            bgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300" 
           />
         </div>
 
@@ -178,10 +191,10 @@ export default function App() {
         />
 
         {/* Tabela de Chamados com suporte a estado de carregamento */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">Lista de Solicitações</h2>
-            <div className="text-xs sm:text-sm text-slate-500">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">Lista de Solicitações</h2>
+            <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               {isLoading ? 'Carregando chamados...' : `Mostrando ${filteredTickets.length} de ${tickets.length} chamados`}
             </div>
           </div>
@@ -189,9 +202,9 @@ export default function App() {
           {isLoading ? (
             /* Esqueleto simples de carregamento (Skeleton Loading) */
             <div className="p-6 space-y-4 animate-pulse">
-              <div className="h-10 bg-slate-100 rounded-lg w-full"></div>
-              <div className="h-12 bg-slate-100 rounded-lg w-full"></div>
-              <div className="h-12 bg-slate-100 rounded-lg w-full"></div>
+              <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-lg w-full"></div>
+              <div className="h-12 bg-slate-100 dark:bg-slate-800 rounded-lg w-full"></div>
+              <div className="h-12 bg-slate-100 dark:bg-slate-800 rounded-lg w-full"></div>
             </div>
           ) : (
             <TicketTable 
