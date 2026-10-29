@@ -4,9 +4,10 @@ import App from './App';
 import './index.css';
 
 async function enableMocking() {
-  if (!import.meta.env.DEV) {
-    return;
-  }
+  const shouldEnableMocking =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_MSW === 'true';
+
+  if (!shouldEnableMocking) return;
 
   const { worker } = await import('./mocks/browser');
   return worker.start();
